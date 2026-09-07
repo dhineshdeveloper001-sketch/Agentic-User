@@ -1,0 +1,78 @@
+{
+  "id": "SOP-EMAIL-001",
+  "title": "Email Not Syncing — Microsoft Outlook / Exchange Online",
+  "category": "Email",
+  "symptoms": [
+    "Outlook not receiving new emails",
+    "Emails stuck in outbox",
+    "Outlook shows disconnected",
+    "Cannot send or receive emails",
+    "Outlook keeps asking for password"
+  ],
+  "error_codes": [
+    "Error 0x800CCC0E: Connection to the server failed",
+    "Error 0x8004010F: Outlook data file cannot be accessed",
+    "Error: Need Password - Exchange",
+    "Error: Trying to connect..."
+  ],
+  "platforms": ["Windows", "macOS"],
+  "prerequisites": [
+    "Microsoft Outlook installed",
+    "Corporate email account (Exchange Online)",
+    "Internet connectivity"
+  ],
+  "diagnostic_questions": [
+    "Can you access your email via Outlook Web (outlook.office.com)?",
+    "Did this start after a recent Windows update or Outlook update?",
+    "Are you seeing any specific error messages?",
+    "Is the issue happening for just you or your entire team?"
+  ],
+  "diagnostic_tools": [
+    {
+      "tool": "check_service_status",
+      "args": { "service_name": "exchange-online" },
+      "purpose": "Verify Exchange Online is operational"
+    },
+    {
+      "tool": "query_user_entitlements",
+      "args": {},
+      "purpose": "Verify user has active Exchange mailbox"
+    }
+  ],
+  "resolution_steps": [
+    {
+      "step": 1,
+      "action": "Check if Outlook is working in offline mode. Look at the bottom status bar — if it says 'Working Offline', go to the Send/Receive tab and click 'Work Offline' to toggle it off.",
+      "checkpoint": "Does the status bar now show 'Connected to: Microsoft Exchange'?",
+      "branch_on_fail": null
+    },
+    {
+      "step": 2,
+      "action": "Try accessing your email at outlook.office.com in a web browser. Sign in with your corporate credentials.",
+      "checkpoint": "Can you see your emails in the web version?",
+      "branch_on_fail": "step_5"
+    },
+    {
+      "step": 3,
+      "action": "If web mail works but Outlook doesn't, restart Outlook. Close it fully (check Task Manager to ensure OUTLOOK.EXE is not running), then reopen it.",
+      "checkpoint": "Is Outlook now syncing your emails?",
+      "branch_on_fail": null
+    },
+    {
+      "step": 4,
+      "action": "Clear the Outlook credential cache. Go to Control Panel → Credential Manager → Windows Credentials. Remove any entries related to 'MicrosoftOffice' or 'outlook'. Restart Outlook and re-enter your credentials.",
+      "checkpoint": "Did Outlook prompt for credentials and then connect successfully?",
+      "branch_on_fail": "escalation"
+    },
+    {
+      "step": 5,
+      "action": "If web mail is also not working, check your account status. Your account may be locked or your password may have expired. Try resetting your password at passwordreset.corporate.com.",
+      "checkpoint": "Were you able to reset your password and access web mail?",
+      "branch_on_fail": "escalation"
+    }
+  ],
+  "escalation_criteria": "If Outlook and web mail are both failing, or if Exchange Online service is confirmed degraded",
+  "escalation_priority": "P2",
+  "escalation_team": "Messaging & Collaboration",
+  "tags": ["email", "outlook", "exchange", "sync", "office365", "microsoft"]
+}

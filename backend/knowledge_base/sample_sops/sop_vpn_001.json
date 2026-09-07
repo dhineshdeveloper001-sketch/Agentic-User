@@ -1,0 +1,88 @@
+{
+  "id": "SOP-VPN-001",
+  "title": "VPN Connection Failure — Cisco AnyConnect",
+  "category": "Network",
+  "symptoms": [
+    "Cannot connect to VPN",
+    "AnyConnect timeout",
+    "VPN drops after connecting",
+    "Unable to establish VPN tunnel",
+    "AnyConnect not responding"
+  ],
+  "error_codes": [
+    "Error: Connection attempt has timed out",
+    "Error: The VPN client was unable to setup IP filtering",
+    "Error: Reconnecting to the secure gateway",
+    "Error: Unable to establish a connection"
+  ],
+  "platforms": ["Windows", "macOS", "Linux"],
+  "prerequisites": [
+    "Corporate laptop with Cisco AnyConnect installed",
+    "Valid corporate credentials",
+    "Internet connectivity"
+  ],
+  "diagnostic_questions": [
+    "Are you on a corporate or personal network?",
+    "Can you access any websites (e.g., google.com)?",
+    "Is this the first time you're connecting from this location?",
+    "When did the VPN last work successfully?"
+  ],
+  "diagnostic_tools": [
+    {
+      "tool": "check_service_status",
+      "args": { "service_name": "vpn-gateway" },
+      "purpose": "Verify the VPN gateway is operational"
+    },
+    {
+      "tool": "run_network_test",
+      "args": { "host": "vpn.corporate.com" },
+      "purpose": "Test connectivity to VPN server"
+    }
+  ],
+  "resolution_steps": [
+    {
+      "step": 1,
+      "action": "Close Cisco AnyConnect completely. Right-click the AnyConnect icon in the system tray and select 'Quit'.",
+      "checkpoint": "Is AnyConnect fully closed? (No icon in system tray)",
+      "branch_on_fail": null
+    },
+    {
+      "step": 2,
+      "action": "Open a web browser and verify you can reach google.com. This confirms basic internet connectivity.",
+      "checkpoint": "Can you load google.com successfully?",
+      "branch_on_fail": "step_6"
+    },
+    {
+      "step": 3,
+      "action": "Relaunch Cisco AnyConnect and enter the VPN server address: vpn.corporate.com. Click 'Connect'.",
+      "checkpoint": "Did the login prompt appear?",
+      "branch_on_fail": "step_5"
+    },
+    {
+      "step": 4,
+      "action": "Enter your corporate credentials (same as email login) and complete MFA if prompted.",
+      "checkpoint": "Did the VPN connect successfully?",
+      "branch_on_fail": "step_5"
+    },
+    {
+      "step": 5,
+      "action": "Clear the DNS cache to resolve stale DNS entries. Open Command Prompt as Administrator and run: ipconfig /flushdns",
+      "checkpoint": "Did you see 'Successfully flushed the DNS Resolver Cache'?",
+      "branch_on_fail": "escalation",
+      "auto_tool": {
+        "tool": "trigger_remote_action",
+        "args": { "action_type": "clear_dns_cache" }
+      }
+    },
+    {
+      "step": 6,
+      "action": "Your internet connection appears to be down. Try the following: 1) Disconnect and reconnect to Wi-Fi, 2) Try using a mobile hotspot, 3) Restart your router if on home network.",
+      "checkpoint": "Can you now access google.com?",
+      "branch_on_fail": "escalation"
+    }
+  ],
+  "escalation_criteria": "If all steps fail after 2 attempts, or if the VPN gateway is confirmed down",
+  "escalation_priority": "P2",
+  "escalation_team": "Network Infrastructure",
+  "tags": ["vpn", "anyconnect", "cisco", "network", "remote", "connectivity"]
+}

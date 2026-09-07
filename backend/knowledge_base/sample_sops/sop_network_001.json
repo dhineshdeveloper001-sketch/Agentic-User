@@ -1,0 +1,85 @@
+{
+  "id": "SOP-NET-001",
+  "title": "Slow Network & DNS Resolution Failures",
+  "category": "Network",
+  "symptoms": [
+    "Internet is very slow",
+    "Websites take forever to load",
+    "DNS resolution failed",
+    "Cannot resolve hostname",
+    "Intermittent connectivity",
+    "Pages timeout randomly"
+  ],
+  "error_codes": [
+    "ERR_NAME_NOT_RESOLVED",
+    "DNS_PROBE_FINISHED_NXDOMAIN",
+    "Error: DNS server not responding",
+    "Error: Could not resolve host"
+  ],
+  "platforms": ["Windows", "macOS", "Linux"],
+  "prerequisites": [
+    "Network connection (wired or wireless)",
+    "Access to Command Prompt or Terminal"
+  ],
+  "diagnostic_questions": [
+    "Is the slowness on all websites or specific ones?",
+    "Are you connected via Wi-Fi or Ethernet cable?",
+    "Has this been happening since a specific time?",
+    "Are other people near you experiencing the same issue?"
+  ],
+  "diagnostic_tools": [
+    {
+      "tool": "run_network_test",
+      "args": { "host": "8.8.8.8" },
+      "purpose": "Test basic internet connectivity (bypasses DNS)"
+    },
+    {
+      "tool": "run_network_test",
+      "args": { "host": "google.com" },
+      "purpose": "Test DNS resolution"
+    },
+    {
+      "tool": "check_service_status",
+      "args": { "service_name": "dns-primary" },
+      "purpose": "Check corporate DNS server health"
+    }
+  ],
+  "resolution_steps": [
+    {
+      "step": 1,
+      "action": "Let's flush your DNS cache to clear any stale entries. Open Command Prompt as Administrator and run: ipconfig /flushdns",
+      "checkpoint": "Did you see 'Successfully flushed the DNS Resolver Cache'?",
+      "branch_on_fail": null,
+      "auto_tool": {
+        "tool": "trigger_remote_action",
+        "args": { "action_type": "clear_dns_cache" }
+      }
+    },
+    {
+      "step": 2,
+      "action": "Release and renew your IP address. In the same Command Prompt, run: ipconfig /release followed by ipconfig /renew",
+      "checkpoint": "Did you get a new IP address? (It should start with 10.x or 192.168.x)",
+      "branch_on_fail": null,
+      "auto_tool": {
+        "tool": "trigger_remote_action",
+        "args": { "action_type": "reset_network_adapter" }
+      }
+    },
+    {
+      "step": 3,
+      "action": "Try loading a website now. Open your browser and go to google.com.",
+      "checkpoint": "Is the website loading faster now?",
+      "branch_on_fail": null
+    },
+    {
+      "step": 4,
+      "action": "If the issue persists, try switching to a different DNS server temporarily. Open Network Settings → Change adapter options → right-click your connection → Properties → IPv4 → set DNS to 8.8.8.8 (primary) and 8.8.4.4 (secondary).",
+      "checkpoint": "Did switching DNS servers resolve the slowness?",
+      "branch_on_fail": "escalation"
+    }
+  ],
+  "escalation_criteria": "If DNS changes don't help, or if the issue affects multiple users on the same floor/site",
+  "escalation_priority": "P2",
+  "escalation_team": "Network Infrastructure",
+  "tags": ["dns", "network", "slow", "internet", "resolution", "connectivity", "latency"]
+}

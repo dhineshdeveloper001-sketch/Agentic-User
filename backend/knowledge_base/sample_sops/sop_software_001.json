@@ -1,0 +1,66 @@
+{
+  "id": "SOP-SW-001",
+  "title": "Software Installation Access Denied — Error 0x80070005",
+  "category": "Software",
+  "symptoms": [
+    "Cannot install software",
+    "Access denied during installation",
+    "Administrator privileges required",
+    "Software installation blocked by policy",
+    "Application not available in Software Center"
+  ],
+  "error_codes": [
+    "Error 0x80070005: Access is denied",
+    "Error: This app has been blocked by your system administrator",
+    "Error: You do not have sufficient privileges to complete this installation",
+    "Error: Group Policy is blocking this application"
+  ],
+  "platforms": ["Windows"],
+  "prerequisites": [
+    "Corporate-managed device",
+    "Active employee account"
+  ],
+  "diagnostic_questions": [
+    "What software are you trying to install?",
+    "Are you trying to install from the Software Center or from an external source?",
+    "What is the exact error message you're seeing?",
+    "Is this software required for your job role?"
+  ],
+  "diagnostic_tools": [
+    {
+      "tool": "query_user_entitlements",
+      "args": {},
+      "purpose": "Check if user has software request permissions and what groups they belong to"
+    }
+  ],
+  "resolution_steps": [
+    {
+      "step": 1,
+      "action": "First, check if the software is available in the Company Portal / Software Center. Open Software Center from the Start menu and search for the application name.",
+      "checkpoint": "Is the software listed in the Software Center?",
+      "branch_on_fail": "step_3"
+    },
+    {
+      "step": 2,
+      "action": "Click 'Install' on the application in Software Center. This will install it with the proper permissions without needing admin rights.",
+      "checkpoint": "Did the installation complete successfully via Software Center?",
+      "branch_on_fail": "step_4"
+    },
+    {
+      "step": 3,
+      "action": "The software is not available in Software Center. You will need to submit a Software Request through the IT Service Portal. Go to serviceportal.corporate.com → Request Software → fill in the application name and business justification.",
+      "checkpoint": "Were you able to submit the software request?",
+      "branch_on_fail": "escalation"
+    },
+    {
+      "step": 4,
+      "action": "If the Software Center installation failed with error 0x80070005, this is typically caused by a conflicting Group Policy. Let's try running the Software Center repair: Open Command Prompt as Admin and run: DISM /Online /Cleanup-Image /RestoreHealth",
+      "checkpoint": "Did the DISM repair complete without errors?",
+      "branch_on_fail": "escalation"
+    }
+  ],
+  "escalation_criteria": "If Software Center is not available, DISM fails, or if the user needs software not in the catalog",
+  "escalation_priority": "P3",
+  "escalation_team": "Desktop Engineering",
+  "tags": ["software", "install", "access-denied", "0x80070005", "group-policy", "admin", "software-center"]
+}

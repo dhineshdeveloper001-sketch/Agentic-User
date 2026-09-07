@@ -1,0 +1,75 @@
+{
+  "id": "SOP-PRINT-001",
+  "title": "Printer Not Responding — Network Printer Issues",
+  "category": "Hardware",
+  "symptoms": [
+    "Printer not responding",
+    "Print jobs stuck in queue",
+    "Cannot find network printer",
+    "Printer offline",
+    "Documents not printing"
+  ],
+  "error_codes": [
+    "Error: Printer is offline",
+    "Error: The print spooler service is not running",
+    "Error: Windows cannot connect to the printer",
+    "Error 0x0000011b: Windows cannot connect to the printer"
+  ],
+  "platforms": ["Windows", "macOS"],
+  "prerequisites": [
+    "Connected to corporate network (or VPN)",
+    "Printer previously installed/mapped"
+  ],
+  "diagnostic_questions": [
+    "Which printer are you trying to use? (Floor/location)",
+    "Were you able to print to this printer before?",
+    "Are other people on your floor also having issues?",
+    "Is the printer showing any error lights or messages on its display?"
+  ],
+  "diagnostic_tools": [
+    {
+      "tool": "check_service_status",
+      "args": { "service_name": "print-server" },
+      "purpose": "Verify the print server is operational"
+    },
+    {
+      "tool": "run_network_test",
+      "args": { "host": "print-server.corporate.com" },
+      "purpose": "Test connectivity to print server"
+    }
+  ],
+  "resolution_steps": [
+    {
+      "step": 1,
+      "action": "First, let's clear any stuck print jobs. Open Settings → Devices → Printers & Scanners. Find your printer, click 'Open queue', and cancel all pending jobs.",
+      "checkpoint": "Were you able to clear the print queue?",
+      "branch_on_fail": null
+    },
+    {
+      "step": 2,
+      "action": "Restart the Print Spooler service. Open Command Prompt as Administrator and run: net stop spooler && net start spooler",
+      "checkpoint": "Did the Print Spooler restart successfully?",
+      "branch_on_fail": null,
+      "auto_tool": {
+        "tool": "trigger_remote_action",
+        "args": { "action_type": "restart_print_spooler" }
+      }
+    },
+    {
+      "step": 3,
+      "action": "Try printing a test page. Go to Settings → Devices → Printers & Scanners → select your printer → Manage → Print a test page.",
+      "checkpoint": "Did the test page print successfully?",
+      "branch_on_fail": null
+    },
+    {
+      "step": 4,
+      "action": "If the test page didn't print, remove and re-add the printer. Go to Settings → Devices → Printers & Scanners → select the printer → Remove device. Then click 'Add a printer or scanner' and wait for it to discover the network printer.",
+      "checkpoint": "Was the printer re-added successfully and can you now print?",
+      "branch_on_fail": "escalation"
+    }
+  ],
+  "escalation_criteria": "If printer remains unresponsive after reinstalling, or if print server is confirmed down",
+  "escalation_priority": "P3",
+  "escalation_team": "Desktop Support",
+  "tags": ["printer", "print", "spooler", "hardware", "network-printer", "offline"]
+}

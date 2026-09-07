@@ -1,0 +1,73 @@
+{
+  "id": "SOP-MFA-001",
+  "title": "Multi-Factor Authentication (MFA/Okta) Issues",
+  "category": "Identity & Access",
+  "symptoms": [
+    "MFA not working",
+    "Okta Verify not sending push",
+    "Cannot enroll in MFA",
+    "Lost phone with authenticator app",
+    "MFA prompt not appearing",
+    "Authenticator app showing wrong code"
+  ],
+  "error_codes": [
+    "Error: Authentication failed",
+    "Error: MFA verification timed out",
+    "Error: Your organization requires MFA",
+    "Error: Factor verification failed"
+  ],
+  "platforms": ["Windows", "macOS", "iOS", "Android"],
+  "prerequisites": [
+    "Active corporate account",
+    "Mobile phone for MFA"
+  ],
+  "diagnostic_questions": [
+    "Which MFA method are you using? (Okta Verify push, SMS, authenticator code)",
+    "Did you recently get a new phone?",
+    "Is the Okta Verify app installed on your phone?",
+    "Are you able to receive text messages on your registered phone?"
+  ],
+  "diagnostic_tools": [
+    {
+      "tool": "check_service_status",
+      "args": { "service_name": "sso-okta" },
+      "purpose": "Verify Okta SSO service is operational"
+    },
+    {
+      "tool": "query_user_entitlements",
+      "args": {},
+      "purpose": "Check user MFA enrollment status"
+    }
+  ],
+  "resolution_steps": [
+    {
+      "step": 1,
+      "action": "First, check if the Okta Verify app is up to date. Go to your phone's app store and check for updates to Okta Verify.",
+      "checkpoint": "Is the Okta Verify app updated to the latest version?",
+      "branch_on_fail": null
+    },
+    {
+      "step": 2,
+      "action": "Try using an alternative MFA method. On the Okta login page, click 'Verify with something else' and select SMS or Email verification instead of push notification.",
+      "checkpoint": "Were you able to log in using an alternative MFA method?",
+      "branch_on_fail": null
+    },
+    {
+      "step": 3,
+      "action": "If push notifications aren't working, make sure your phone has internet connectivity and that notifications are enabled for the Okta Verify app. Go to Settings → Notifications → Okta Verify → Enable notifications.",
+      "checkpoint": "Are notifications now enabled for Okta Verify?",
+      "branch_on_fail": null
+    },
+    {
+      "step": 4,
+      "action": "If you got a new phone and need to re-enroll in MFA, this requires an identity verification and MFA reset. This is a security-sensitive action that our team will assist with.",
+      "checkpoint": "N/A — proceeding to assisted MFA reset",
+      "branch_on_fail": null,
+      "requires_hitl": true
+    }
+  ],
+  "escalation_criteria": "If user needs MFA re-enrollment (new phone) or if Okta service is degraded",
+  "escalation_priority": "P1",
+  "escalation_team": "Identity & Access Management",
+  "tags": ["mfa", "okta", "two-factor", "2fa", "authentication", "push", "sso", "verify"]
+}

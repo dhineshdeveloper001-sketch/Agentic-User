@@ -1,0 +1,67 @@
+{
+  "id": "SOP-SSL-001",
+  "title": "SSL Certificate Errors — ERR_CERT_COMMON_NAME_INVALID",
+  "category": "Security",
+  "symptoms": [
+    "SSL certificate error in browser",
+    "Your connection is not private",
+    "Certificate warning when accessing internal site",
+    "NET::ERR_CERT_AUTHORITY_INVALID",
+    "SEC_ERROR_UNKNOWN_ISSUER in Firefox"
+  ],
+  "error_codes": [
+    "ERR_CERT_COMMON_NAME_INVALID",
+    "ERR_CERT_AUTHORITY_INVALID",
+    "NET::ERR_CERT_DATE_INVALID",
+    "SEC_ERROR_UNKNOWN_ISSUER",
+    "DLG_FLAGS_SEC_CERT_CN_INVALID"
+  ],
+  "platforms": ["Windows", "macOS", "Linux"],
+  "prerequisites": [
+    "Corporate network or VPN access",
+    "Web browser (Chrome, Firefox, or Edge)"
+  ],
+  "diagnostic_questions": [
+    "Which website/URL are you trying to access?",
+    "Is this an internal corporate site or an external website?",
+    "Which browser are you using?",
+    "Does the error appear in all browsers or just one?"
+  ],
+  "diagnostic_tools": [
+    {
+      "tool": "run_network_test",
+      "args": { "host": "affected-site.corporate.com" },
+      "purpose": "Verify DNS resolution and connectivity to the site"
+    }
+  ],
+  "resolution_steps": [
+    {
+      "step": 1,
+      "action": "First, check the date and time on your computer. Incorrect system time is a common cause of certificate errors. Right-click the clock in the taskbar → Adjust date/time → Enable 'Set time automatically'.",
+      "checkpoint": "Is your system date and time now correct?",
+      "branch_on_fail": null
+    },
+    {
+      "step": 2,
+      "action": "Clear your browser's SSL cache. In Chrome: Settings → Privacy → Security → Clear browsing data → select 'Cached images and files' → Clear data. Then restart the browser.",
+      "checkpoint": "Does the certificate error still appear after clearing cache?",
+      "branch_on_fail": null
+    },
+    {
+      "step": 3,
+      "action": "If this is an internal corporate site, you may need to install the corporate root CA certificate. Open the Company Portal or Software Center and search for 'Corporate Root CA'. Install it if available.",
+      "checkpoint": "Were you able to install the corporate root certificate?",
+      "branch_on_fail": "escalation"
+    },
+    {
+      "step": 4,
+      "action": "Try accessing the site in an InPrivate/Incognito window. If it works there, a browser extension may be interfering. Disable extensions one by one to identify the culprit.",
+      "checkpoint": "Does the site load without errors in InPrivate/Incognito mode?",
+      "branch_on_fail": "escalation"
+    }
+  ],
+  "escalation_criteria": "If the certificate is genuinely expired or misconfigured on the server side",
+  "escalation_priority": "P2",
+  "escalation_team": "Security & PKI",
+  "tags": ["ssl", "certificate", "https", "security", "browser", "ERR_CERT", "tls"]
+}

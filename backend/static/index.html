@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Support Agent — Intelligent Helpdesk</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon">🤖</div>
+          <div>
+            <h1>IT Support Agent</h1>
+            <p>Intelligent Helpdesk</p>
+          </div>
+        </div>
+
+        <button class="new-chat-btn" id="new-chat-btn" type="button">
+          <span>＋</span> New Support Session
+        </button>
+      </div>
+
+      <div class="outage-banner" id="backend-offline-banner" style="display: none;">
+        <div class="outage-banner-header">
+          <span class="outage-badge">Backend Offline</span>
+        </div>
+        <p class="outage-text">
+          Agent backend is currently unreachable.
+        </p>
+      </div>
+
+      <div class="sidebar-sessions">
+        <h3>Recent Sessions</h3>
+        <div id="session-list">
+          <p style="font-size: 12px; color: var(--text-tertiary); padding: 12px 8px; line-height: 1.6;">
+            No sessions yet. Click "New Support Session" or start typing to begin.
+          </p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="chat-header">
+        <div class="chat-header-title">
+          <span style="font-size: 20px;">🛡️</span>
+          <h2>IT Support Agent</h2>
+          <span class="sop-badge" id="header-sop-badge" style="display: none;">📋 SOP</span>
+        </div>
+        <div class="chat-header-status" id="header-status">
+          Agent Online
+        </div>
+      </header>
+
+      <!-- Welcome View (Shown when no messages) -->
+      <div class="welcome-screen" id="welcome-screen">
+        <div class="welcome-icon">🛡️</div>
+        <h2>How can I help you today?</h2>
+        <p>
+          I'm your AI-powered IT support agent. I can diagnose issues,
+          run system checks, walk you through fixes step-by-step,
+          and escalate to specialists when needed.
+        </p>
+
+        <div class="welcome-suggestions">
+          <div class="suggestion-card" data-prompt="My VPN is not connecting. I keep getting a timeout error when trying to connect with Cisco AnyConnect.">
+            <div class="suggestion-card-icon">🔒</div>
+            <h4>VPN Not Connecting</h4>
+            <p>Cisco AnyConnect timeout or connection failures</p>
+          </div>
+          <div class="suggestion-card" data-prompt="My Outlook is showing 'Disconnected' and I'm not receiving any new emails since this morning.">
+            <div class="suggestion-card-icon">📧</div>
+            <h4>Email Not Syncing</h4>
+            <p>Outlook disconnected or emails stuck</p>
+          </div>
+          <div class="suggestion-card" data-prompt="I'm locked out of my account. I keep getting 'The referenced account is currently locked out' when trying to log in.">
+            <div class="suggestion-card-icon">🔑</div>
+            <h4>Account Locked Out</h4>
+            <p>Too many failed login attempts</p>
+          </div>
+          <div class="suggestion-card" data-prompt="My printer shows as offline and all my print jobs are stuck in the queue. The printer is on the 3rd floor.">
+            <div class="suggestion-card-icon">🖨️</div>
+            <h4>Printer Not Working</h4>
+            <p>Network printer offline or stuck queue</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Messages (Hidden until messages exist) -->
+      <div class="chat-messages" id="chat-messages" style="display: none;">
+        <!-- Dynamic message items will render here -->
+        <div id="messages-anchor"></div>
+      </div>
+
+      <!-- Typing Indicator -->
+      <div class="typing-indicator" id="typing-indicator" style="display: none; padding: 0 24px 12px;">
+        <div class="message-avatar" style="background: var(--gradient-agent);">🤖</div>
+        <div class="typing-dots">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+      </div>
+
+      <!-- Chat Input Area -->
+      <div class="chat-input-container">
+        <form id="chat-form">
+          <div class="chat-input-wrapper">
+            <input
+              type="text"
+              class="chat-input"
+              id="chat-input"
+              placeholder="Describe your IT issue..."
+              autocomplete="off"
+            />
+            <button class="chat-send-btn" type="submit" id="send-btn" aria-label="Send message">
+              ➤
+            </button>
+          </div>
+          <p class="chat-input-hint">
+            Press Enter to send · Describe your issue in detail for best results
+          </p>
+        </form>
+      </div>
+
+      <!-- HITL Modal -->
+      <div class="hitl-overlay" id="hitl-modal" style="display: none;">
+        <div class="hitl-modal">
+          <div class="hitl-modal-icon">⚠️</div>
+          <h3>Action Requires Your Approval</h3>
+          <p id="hitl-modal-desc">
+            The agent wants to perform a security-sensitive action.
+            Please review and confirm before proceeding.
+          </p>
+          <div class="hitl-actions">
+            <button class="hitl-btn hitl-btn-decline" id="hitl-decline-btn" type="button">
+              Decline & Escalate
+            </button>
+            <button class="hitl-btn hitl-btn-approve" id="hitl-approve-btn" type="button">
+              ✓ Approve Action
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
