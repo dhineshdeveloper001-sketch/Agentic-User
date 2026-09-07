@@ -388,13 +388,27 @@ def present_step_node(state: AgentState) -> dict[str, Any]:
             context = "\n".join(context_parts)
 
             llm = _get_llm()
-            response = llm.invoke([
-                SystemMessage(content=RESPONSE_PROMPT.format(context=context)),
-                *state.get("messages", [])[-6:],
-            ])
+            ai_content = None
+            if llm:
+                try:
+                    response = llm.invoke([
+                        SystemMessage(content=RESPONSE_PROMPT.format(context=context)),
+                        *state.get("messages", [])[-6:],
+                    ])
+                    ai_content = response.content
+                except Exception as e:
+                    logger.warning(f"LLM invoke failed in present_step_node: {e}")
+
+            if not ai_content:
+                # Deterministic SOP step presentation fallback
+                ai_content = (
+                    f"**Troubleshooting Step {step_data['step']} for {sop['title']}**\n\n"
+                    f"{step_data['action']}\n\n"
+                    f"👉 **Checkpoint**: {step_data.get('checkpoint', 'Did this step resolve the issue?')}"
+                )
 
             return {
-                "messages": [AIMessage(content=response.content)],
+                "messages": [AIMessage(content=ai_content)],
                 "attempted_steps": attempted,
                 "current_step": current_step,
                 "next_node": "user_checkpoint",
@@ -414,13 +428,30 @@ def present_step_node(state: AgentState) -> dict[str, Any]:
 
     context = "\n".join(context_parts)
     llm = _get_llm()
-    response = llm.invoke([
-        SystemMessage(content=RESPONSE_PROMPT.format(context=context)),
-        *state.get("messages", [])[-6:],
-    ])
+    ai_content = None
+    if llm:
+        try:
+            response = llm.invoke([
+                SystemMessage(content=RESPONSE_PROMPT.format(context=context)),
+                *state.get("messages", [])[-6:],
+            ])
+            ai_content = response.content
+        except Exception as e:
+            logger.warning(f"LLM invoke failed: {e}")
+
+    if not ai_content:
+        chunks = state.get("retrieved_chunks", [])
+        if chunks:
+            ai_content = (
+                f"Here is what I found in the knowledge base regarding your issue:\n\n"
+                + "\n\n".join([f"• {c['text'][:300]}..." for c in chunks[:2]])
+                + "\n\nDid this help resolve your issue, or would you like to escalate to support?"
+            )
+        else:
+            ai_content = "I reviewed your inquiry. Would you like me to run additional diagnostics or create a support ticket for a specialist?"
 
     return {
-        "messages": [AIMessage(content=response.content)],
+        "messages": [AIMessage(content=ai_content)],
         "next_node": "user_checkpoint",
     }
 
@@ -455,23 +486,35 @@ Classify as ONE of:
 
 Respond with ONLY a JSON object: {"classification": "resolved|not_resolved|escalate|continue"}"""
 
-    try:
-        response = llm.invoke([
-            SystemMessage(content=classify_prompt),
-            HumanMessage(content=user_input),
-        ])
-        content = response.content.strip()
-        if content.startswith("```"):
-            content = content.split("\n", 1)[1] if "\n" in content else content
-            if content.endswith("```"):
-                content = content[:-3]
-            content = content.strip()
-        if content.startswith("json"):
-            content = content[4:].strip()
+    classification = "continue"
+    if llm:
+        try:
+            response = llm.invoke([
+                SystemMessage(content=classify_prompt),
+                HumanMessage(content=user_input),
+            ])
+            content = response.content.strip()
+            if content.startswith("```"):
+                content = content.split("\n", 1)[1] if "\n" in content else content
+                if content.endswith("```"):
+                    content = content[:-3]
+                content = content.strip()
+            if content.startswith("json"):
+                content = content[4:].strip()
 
-        classification = json.loads(content).get("classification", "continue")
-    except Exception:
-        classification = "continue"
+            classification = json.loads(content).get("classification", "continue")
+        except Exception:
+            classification = "continue"
+
+    # Heuristic fallback if LLM is unavailable or returned continue on simple responses
+    if classification == "continue":
+        lower = user_input.strip()
+        if any(w in lower for w in ["fixed", "resolved", "worked", "it works", "solved", "yes, it worked", "thank you", "thanks"]):
+            classification = "resolved"
+        elif any(w in lower for w in ["didn't work", "did not work", "no", "still broken", "not working", "next step", "same error"]):
+            classification = "not_resolved"
+        elif any(w in lower for w in ["escalate", "ticket", "human", "specialist"]):
+            classification = "escalate"
 
     if classification == "resolved":
         return {

@@ -156,7 +156,10 @@ async def run_agent(session_id: str, user_message: str) -> dict[str, Any]:
                     state.update(esc_result)
                     result = state
                 elif next_node == "present_step":
-                    result = graph.invoke(state)
+                    from backend.agent.nodes import present_step_node
+                    step_result = present_step_node(state)
+                    state.update(step_result)
+                    result = state
                 else:
                     result = graph.invoke(state)
 
