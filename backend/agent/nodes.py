@@ -230,11 +230,16 @@ def knowledge_retrieval_node(state: AgentState) -> dict[str, Any]:
         query_parts.append(platform)
     query = " ".join(query_parts)
 
-    retriever = get_retriever()
-    response = retriever.retrieve(
-        query=query,
-        platform=platform if platform != "unknown" else None,
-    )
+    try:
+        retriever = get_retriever()
+        response = retriever.retrieve(
+            query=query,
+            platform=platform if platform != "unknown" else None,
+        )
+    except Exception as e:
+        logger.error(f"Retrieval error: {e}", exc_info=True)
+        from backend.knowledge_base.retriever import RetrievalResponse
+        response = RetrievalResponse(query=query, has_verified_runbook=False, confidence=0.0)
 
     chunks = [
         {

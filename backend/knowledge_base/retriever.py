@@ -22,6 +22,7 @@ from backend.config import (
     CONFIDENCE_THRESHOLD,
     RAG_TOP_K,
     RERANKER_TOP_N,
+    CHROMA_PERSIST_DIR,
 )
 from backend.knowledge_base.ingestion import build_index
 
@@ -64,11 +65,41 @@ class HybridRetriever:
         top_k: int = RAG_TOP_K,
         reranker_top_n: int = RERANKER_TOP_N,
     ):
-        self.collection = collection or build_index()
+        self._explicit_collection = collection
+        self._collection = collection
         self.confidence_threshold = confidence_threshold
         self.top_k = top_k
         self.reranker_top_n = reranker_top_n
         self._reranker = None
+
+    @property
+    def collection(self) -> chromadb.Collection:
+        """Get the active collection handle, safely re-connecting if invalidated."""
+        if self._explicit_collection is not None:
+            return self._explicit_collection
+
+        try:
+            if self._collection is not None:
+                self._collection.count()
+                return self._collection
+        except Exception as e:
+            logger.warning(f"Cached collection handle invalidated ({e}). Re-acquiring...")
+            self._collection = None
+
+        try:
+            client = chromadb.PersistentClient(path=str(CHROMA_PERSIST_DIR))
+            coll = client.get_or_create_collection(
+                name="it_support_sops",
+                metadata={"hnsw:space": "cosine"},
+            )
+            if coll.count() == 0:
+                coll = build_index(force_rebuild=False)
+            self._collection = coll
+            return self._collection
+        except Exception as e:
+            logger.error(f"Error accessing ChromaDB collection: {e}. Rebuilding index...")
+            self._collection = build_index(force_rebuild=False)
+            return self._collection
 
     def _get_reranker(self):
         """Lazy-load the cross-encoder reranker."""
@@ -108,8 +139,13 @@ class HybridRetriever:
         Returns:
             RetrievalResponse with ranked results and confidence signal.
         """
-        if self.collection.count() == 0:
-            logger.warning("Collection is empty — no results.")
+        try:
+            coll = self.collection
+            if coll.count() == 0:
+                logger.warning("Collection is empty — no results.")
+                return RetrievalResponse(query=query)
+        except Exception as e:
+            logger.error(f"Failed to access collection for query: {e}")
             return RetrievalResponse(query=query)
 
         # ── Step 1: Dense semantic search ────────────────────────────────
@@ -129,9 +165,9 @@ class HybridRetriever:
                 where_filter = {"$and": conditions}
 
         try:
-            results = self.collection.query(
+            results = coll.query(
                 query_texts=[query],
-                n_results=min(self.top_k, self.collection.count()),
+                n_results=min(self.top_k, coll.count()),
                 where=where_filter,
                 include=["documents", "metadatas", "distances"],
             )
@@ -139,9 +175,9 @@ class HybridRetriever:
             # If metadata filter fails (e.g., no matching docs),
             # retry without filter
             logger.warning(f"Filtered query failed: {e}. Retrying unfiltered.")
-            results = self.collection.query(
+            results = coll.query(
                 query_texts=[query],
-                n_results=min(self.top_k, self.collection.count()),
+                n_results=min(self.top_k, coll.count()),
                 include=["documents", "metadatas", "distances"],
             )
 
@@ -258,3 +294,10 @@ def get_retriever() -> HybridRetriever:
     if _retriever is None:
         _retriever = HybridRetriever()
     return _retriever
+
+
+def reset_retriever():
+    """Reset the singleton retriever so subsequent queries refresh state."""
+    global _retriever
+    _retriever = None
+

@@ -36,7 +36,7 @@ CHROMA_PERSIST_DIR: str = os.getenv("CHROMA_PERSIST_DIR", _default_chroma_dir)
 
 # ── Server ───────────────────────────────────────────────────────────────────
 BACKEND_HOST: str = os.getenv("BACKEND_HOST", "0.0.0.0")
-BACKEND_PORT: int = int(os.getenv("BACKEND_PORT", "8000"))
+BACKEND_PORT: int = int(os.getenv("PORT", os.getenv("BACKEND_PORT", "8000")))
 FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 # ── Tool Whitelists (Phase 4 Guardrails) ─────────────────────────────────────

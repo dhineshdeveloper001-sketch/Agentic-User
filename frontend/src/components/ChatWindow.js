@@ -5,6 +5,7 @@ import MessageBubble from "./MessageBubble";
 import ToolCard from "./ToolCard";
 import StepTracker from "./StepTracker";
 import TicketCard from "./TicketCard";
+import SourcesCard from "./SourcesCard";
 
 export default function ChatWindow({
   messages,
@@ -36,6 +37,18 @@ export default function ChatWindow({
         {messages.map((msg, i) => (
           <div key={i}>
             <MessageBubble message={msg} />
+
+            {/* Show RAG sources if available */}
+            {msg.role === "assistant" && msg.metadata?.sources?.length > 0 && (
+              <div
+                style={{ maxWidth: "85%", marginTop: "-8px" }}
+                className="message-assistant"
+              >
+                <div style={{ marginLeft: "48px" }}>
+                  <SourcesCard sources={msg.metadata.sources} />
+                </div>
+              </div>
+            )}
 
             {/* Show tool cards after assistant messages with diagnostic results */}
             {msg.role === "assistant" &&

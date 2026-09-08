@@ -3,152 +3,469 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IT Support Agent — Intelligent Helpdesk</title>
+  <title>AI IT Helpdesk Agent — Intelligent Technical Troubleshooting</title>
+  <meta name="description" content="Intelligent, graph-orchestrated IT support helpdesk agent with RAG knowledge search, automated diagnostics, and real-time troubleshooting.">
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="app-layout">
+    <!-- Mobile Drawer Backdrop -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-logo">
-          <div class="sidebar-logo-icon">🤖</div>
-          <div>
+          <div class="sidebar-logo-icon">🛡️</div>
+          <div class="sidebar-logo-text">
             <h1>IT Support Agent</h1>
             <p>Intelligent Helpdesk</p>
           </div>
         </div>
 
-        <button class="new-chat-btn" id="new-chat-btn" type="button">
-          <span>＋</span> New Support Session
+        <button class="new-chat-btn" id="new-chat-btn" type="button" title="Start fresh conversation">
+          <span class="btn-icon">＋</span>
+          <span>New Chat</span>
         </button>
       </div>
 
+      <!-- Navigation Tabs -->
+      <nav class="sidebar-nav" aria-label="Main Navigation">
+        <button class="nav-item active" id="nav-chat-btn" type="button" data-view="chat">
+          <span class="nav-icon">💬</span>
+          <span class="nav-label">Active Chat</span>
+        </button>
+        <button class="nav-item" id="nav-history-btn" type="button" data-view="history">
+          <span class="nav-icon">🗂️</span>
+          <span class="nav-label">Chat History</span>
+          <span class="nav-badge" id="session-count-badge">0</span>
+        </button>
+        <button class="nav-item" id="nav-kb-btn" type="button" data-view="knowledge">
+          <span class="nav-icon">📚</span>
+          <span class="nav-label">Knowledge Base</span>
+        </button>
+        <button class="nav-item" id="nav-diag-btn" type="button" data-view="diagnostics">
+          <span class="nav-icon">⚡</span>
+          <span class="nav-label">Diagnostics</span>
+        </button>
+      </nav>
+
+      <!-- Backend Offline Warning Banner -->
       <div class="outage-banner" id="backend-offline-banner" style="display: none;">
         <div class="outage-banner-header">
+          <span class="status-indicator-dot error"></span>
           <span class="outage-badge">Backend Offline</span>
         </div>
         <p class="outage-text">
-          Agent backend is currently unreachable.
+          Service unreachable at port 8000. Reconnecting...
         </p>
       </div>
 
-      <div class="sidebar-sessions">
-        <h3>Recent Sessions</h3>
-        <div id="session-list">
-          <p style="font-size: 12px; color: var(--text-tertiary); padding: 12px 8px; line-height: 1.6;">
-            No sessions yet. Click "New Support Session" or start typing to begin.
+      <!-- Chat History Sub-panel in Sidebar -->
+      <div class="sidebar-sessions-section" id="sidebar-sessions-section">
+        <div class="sidebar-section-header">
+          <h3>Recent Conversations</h3>
+          <button class="section-action-btn" id="refresh-sessions-btn" title="Refresh session list">↻</button>
+        </div>
+        <div class="session-list" id="session-list">
+          <p class="empty-state-text">
+            No active conversations. Start typing or click New Chat.
           </p>
+        </div>
+      </div>
+
+      <!-- Sidebar Footer Status -->
+      <div class="sidebar-footer">
+        <div class="system-status-indicator">
+          <span class="status-indicator-dot" id="footer-status-dot"></span>
+          <div class="status-details">
+            <span class="status-title" id="footer-status-text">Agent Online</span>
+            <span class="status-subtitle">FastAPI & LangGraph</span>
+          </div>
         </div>
       </div>
     </aside>
 
-    <!-- Main Content -->
+    <!-- Main Content Area -->
     <main class="main-content">
-      <header class="chat-header">
-        <div class="chat-header-title">
-          <span style="font-size: 20px;">🛡️</span>
-          <h2>IT Support Agent</h2>
-          <span class="sop-badge" id="header-sop-badge" style="display: none;">📋 SOP</span>
+      <!-- Top Application Header -->
+      <header class="app-header">
+        <div class="header-left">
+          <button class="menu-toggle-btn" id="menu-toggle-btn" aria-label="Toggle Navigation Menu">
+            ☰
+          </button>
+          <div class="header-titles">
+            <div class="header-main-title">
+              <h2>AI IT Helpdesk Agent</h2>
+              <span class="sop-badge" id="header-sop-badge" style="display: none;">📋 SOP</span>
+            </div>
+            <p class="header-subtitle">
+              Diagnose technical issues with intelligent troubleshooting assistance.
+            </p>
+          </div>
         </div>
-        <div class="chat-header-status" id="header-status">
-          Agent Online
+
+        <div class="header-right">
+          <!-- View switcher quick buttons for desktop -->
+          <div class="header-view-switch">
+            <button class="header-tab active" id="tab-chat" data-view="chat">Chat</button>
+            <button class="header-tab" id="tab-knowledge" data-view="knowledge">Knowledge Base</button>
+            <button class="header-tab" id="tab-diagnostics" data-view="diagnostics">Diagnostics</button>
+          </div>
+
+          <div class="agent-status-badge" id="agent-status-badge">
+            <span class="status-dot"></span>
+            <span id="agent-status-label">Online</span>
+          </div>
         </div>
       </header>
 
-      <!-- Welcome View (Shown when no messages) -->
-      <div class="welcome-screen" id="welcome-screen">
-        <div class="welcome-icon">🛡️</div>
-        <h2>How can I help you today?</h2>
-        <p>
-          I'm your AI-powered IT support agent. I can diagnose issues,
-          run system checks, walk you through fixes step-by-step,
-          and escalate to specialists when needed.
-        </p>
+      <!-- VIEW 1: MAIN CHAT VIEW -->
+      <section class="view-panel active" id="view-chat">
+        <!-- Welcome Screen (Shown when message history is empty) -->
+        <div class="welcome-screen" id="welcome-screen">
+          <div class="welcome-badge">AI-Powered IT Support</div>
+          <div class="welcome-icon-wrap">🛡️</div>
+          <h2>How can I help you today?</h2>
+          <p class="welcome-desc">
+            I'm your intelligent technical helpdesk agent. I can diagnose infrastructure issues,
+            verify connectivity, walk you through resolution steps, and escalate tickets to specialized Tier-2 teams.
+          </p>
 
-        <div class="welcome-suggestions">
-          <div class="suggestion-card" data-prompt="My VPN is not connecting. I keep getting a timeout error when trying to connect with Cisco AnyConnect.">
-            <div class="suggestion-card-icon">🔒</div>
-            <h4>VPN Not Connecting</h4>
-            <p>Cisco AnyConnect timeout or connection failures</p>
-          </div>
-          <div class="suggestion-card" data-prompt="My Outlook is showing 'Disconnected' and I'm not receiving any new emails since this morning.">
-            <div class="suggestion-card-icon">📧</div>
-            <h4>Email Not Syncing</h4>
-            <p>Outlook disconnected or emails stuck</p>
-          </div>
-          <div class="suggestion-card" data-prompt="I'm locked out of my account. I keep getting 'The referenced account is currently locked out' when trying to log in.">
-            <div class="suggestion-card-icon">🔑</div>
-            <h4>Account Locked Out</h4>
-            <p>Too many failed login attempts</p>
-          </div>
-          <div class="suggestion-card" data-prompt="My printer shows as offline and all my print jobs are stuck in the queue. The printer is on the 3rd floor.">
-            <div class="suggestion-card-icon">🖨️</div>
-            <h4>Printer Not Working</h4>
-            <p>Network printer offline or stuck queue</p>
-          </div>
-        </div>
-      </div>
+          <!-- Clickable Issue Suggestions (6 core cards from requirements) -->
+          <div class="welcome-suggestions-grid">
+            <button class="suggestion-card" type="button" data-prompt="My WiFi is connected but I have no internet.">
+              <div class="suggestion-icon">🌐</div>
+              <div class="suggestion-content">
+                <h4>Network Issue</h4>
+                <p>WiFi is connected but no internet access</p>
+              </div>
+            </button>
 
-      <!-- Chat Messages (Hidden until messages exist) -->
-      <div class="chat-messages" id="chat-messages" style="display: none;">
-        <!-- Dynamic message items will render here -->
-        <div id="messages-anchor"></div>
-      </div>
+            <button class="suggestion-card" type="button" data-prompt="My computer is running very slowly. High CPU and memory usage.">
+              <div class="suggestion-icon">💻</div>
+              <div class="suggestion-content">
+                <h4>Slow Computer</h4>
+                <p>Performance lag, system freezing or high memory</p>
+              </div>
+            </button>
 
-      <!-- Typing Indicator -->
-      <div class="typing-indicator" id="typing-indicator" style="display: none; padding: 0 24px 12px;">
-        <div class="message-avatar" style="background: var(--gradient-agent);">🤖</div>
-        <div class="typing-dots">
-          <div class="typing-dot"></div>
-          <div class="typing-dot"></div>
-          <div class="typing-dot"></div>
-        </div>
-      </div>
+            <button class="suggestion-card" type="button" data-prompt="My printer is not printing and appears offline in the print queue.">
+              <div class="suggestion-icon">🖨️</div>
+              <div class="suggestion-content">
+                <h4>Printer Problem</h4>
+                <p>Network printer offline or jobs stuck in queue</p>
+              </div>
+            </button>
 
-      <!-- Chat Input Area -->
-      <div class="chat-input-container">
-        <form id="chat-form">
-          <div class="chat-input-wrapper">
-            <input
-              type="text"
-              class="chat-input"
-              id="chat-input"
-              placeholder="Describe your IT issue..."
-              autocomplete="off"
-            />
-            <button class="chat-send-btn" type="submit" id="send-btn" aria-label="Send message">
-              ➤
+            <button class="suggestion-card" type="button" data-prompt="Chrome keeps crashing and pages fail to load.">
+              <div class="suggestion-icon">🌍</div>
+              <div class="suggestion-content">
+                <h4>Browser Issue</h4>
+                <p>Browser crashes, SSL certificate or cache errors</p>
+              </div>
+            </button>
+
+            <button class="suggestion-card" type="button" data-prompt="My VPN is not connecting. I keep getting a timeout error with Cisco AnyConnect.">
+              <div class="suggestion-icon">🔐</div>
+              <div class="suggestion-content">
+                <h4>VPN Problem</h4>
+                <p>Cisco AnyConnect gateway connection failures</p>
+              </div>
+            </button>
+
+            <button class="suggestion-card" type="button" data-prompt="My computer has no sound output from headphones or speakers.">
+              <div class="suggestion-icon">🔊</div>
+              <div class="suggestion-content">
+                <h4>Audio Problem</h4>
+                <p>Missing audio output device or muted driver</p>
+              </div>
             </button>
           </div>
-          <p class="chat-input-hint">
-            Press Enter to send · Describe your issue in detail for best results
-          </p>
-        </form>
-      </div>
+        </div>
 
-      <!-- HITL Modal -->
+        <!-- Chat Messages Container -->
+        <div class="chat-messages" id="chat-messages" style="display: none;">
+          <!-- Dynamic messages will render here -->
+          <div id="messages-anchor"></div>
+        </div>
+
+        <!-- Live Typing / Processing Indicator -->
+        <div class="typing-indicator" id="typing-indicator" style="display: none;">
+          <div class="message-avatar">🤖</div>
+          <div class="typing-bubble">
+            <span class="typing-text" id="typing-status-text">AI is thinking...</span>
+            <div class="typing-dots">
+              <div class="typing-dot"></div>
+              <div class="typing-dot"></div>
+              <div class="typing-dot"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Compact Category Pills Bar -->
+        <div class="category-pills-container">
+          <span class="category-label">Quick Issues:</span>
+          <div class="category-pills-scroll">
+            <button class="category-pill" type="button" data-prompt="My WiFi is connected but there is no internet.">
+              <span>🌐</span> Network
+            </button>
+            <button class="category-pill" type="button" data-prompt="My computer is very slow.">
+              <span>💻</span> System
+            </button>
+            <button class="category-pill" type="button" data-prompt="My printer is offline.">
+              <span>🖨️</span> Printer
+            </button>
+            <button class="category-pill" type="button" data-prompt="Chrome keeps crashing.">
+              <span>🌍</span> Browser
+            </button>
+            <button class="category-pill" type="button" data-prompt="My VPN is not connecting.">
+              <span>🔐</span> VPN
+            </button>
+            <button class="category-pill" type="button" data-prompt="My computer has no sound.">
+              <span>🔊</span> Audio
+            </button>
+            <button class="category-pill" type="button" data-prompt="An application is not opening.">
+              <span>📦</span> Software
+            </button>
+            <button class="category-pill" type="button" data-prompt="My laptop performance is very slow.">
+              <span>⚡</span> Performance
+            </button>
+          </div>
+        </div>
+
+        <!-- Chat Input Area -->
+        <div class="chat-input-container">
+          <form id="chat-form" class="chat-form">
+            <div class="chat-input-wrapper">
+              <textarea
+                class="chat-input"
+                id="chat-input"
+                rows="1"
+                placeholder="Describe your IT issue in detail..."
+                autocomplete="off"
+              ></textarea>
+              <button class="chat-send-btn" type="submit" id="send-btn" aria-label="Send message" title="Send message">
+                <span class="send-icon">➤</span>
+              </button>
+            </div>
+            <div class="chat-input-footer">
+              <span class="chat-hint">Press <kbd>Enter</kbd> to send · <kbd>Shift + Enter</kbd> for new line</span>
+              <span class="chat-session-tag" id="current-session-tag">Session: Auto</span>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- VIEW 2: KNOWLEDGE BASE VIEW -->
+      <section class="view-panel" id="view-knowledge" style="display: none;">
+        <div class="panel-inner">
+          <div class="panel-header">
+            <div>
+              <div class="panel-badge">RAG Knowledge Engine</div>
+              <h3 class="panel-title">Standard Operating Procedures (SOPs)</h3>
+              <p class="panel-desc">
+                Browse indexed troubleshooting runbooks loaded from ChromaDB. Documents are searched during troubleshooting turns.
+              </p>
+            </div>
+            <div class="panel-actions">
+              <button class="btn btn-secondary" id="rebuild-kb-btn" type="button">
+                <span>↻</span> Rebuild Index
+              </button>
+              <button class="btn btn-primary" id="open-upload-modal-btn" type="button">
+                <span>＋</span> Upload Document
+              </button>
+            </div>
+          </div>
+
+          <!-- Document List Filter / Search -->
+          <div class="kb-filter-bar">
+            <input
+              type="text"
+              class="kb-search-input"
+              id="kb-search-input"
+              placeholder="Filter by title, category, or platform..."
+            />
+            <span class="kb-doc-count" id="kb-doc-count">Loading documents...</span>
+          </div>
+
+          <!-- Documents Cards Grid -->
+          <div class="kb-grid" id="kb-grid">
+            <div class="loading-spinner-wrap">
+              <div class="spinner"></div>
+              <span>Loading Knowledge Base documents...</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 3: DIAGNOSTICS SUITE VIEW -->
+      <section class="view-panel" id="view-diagnostics" style="display: none;">
+        <div class="panel-inner">
+          <div class="panel-header">
+            <div>
+              <div class="panel-badge">System Diagnostics & Remediation</div>
+              <h3 class="panel-title">Diagnostic Tools Console</h3>
+              <p class="panel-desc">
+                Run deterministic backend tools to verify infrastructure connectivity, service latency, outages, and user identity.
+              </p>
+            </div>
+            <div class="panel-actions">
+              <button class="btn btn-secondary" id="refresh-tools-btn" type="button">
+                <span>↻</span> Refresh Tools
+              </button>
+            </div>
+          </div>
+
+          <!-- Diagnostic Tools Cards Grid -->
+          <div class="diagnostics-grid" id="diagnostics-grid">
+            <div class="loading-spinner-wrap">
+              <div class="spinner"></div>
+              <span>Loading backend diagnostic tools...</span>
+            </div>
+          </div>
+
+          <!-- Diagnostic Results Output Box -->
+          <div class="diag-output-container" id="diag-output-container" style="display: none;">
+            <div class="diag-output-header">
+              <h4>Last Diagnostic Execution Result</h4>
+              <button class="diag-output-clear" id="diag-output-clear">✕ Clear</button>
+            </div>
+            <div class="diag-output-content" id="diag-output-content"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 4: CHAT HISTORY FULL VIEW -->
+      <section class="view-panel" id="view-history" style="display: none;">
+        <div class="panel-inner">
+          <div class="panel-header">
+            <div>
+              <div class="panel-badge">Conversation Store</div>
+              <h3 class="panel-title">Support Sessions History</h3>
+              <p class="panel-desc">
+                View all past troubleshooting sessions. Click on any conversation to review or resume troubleshooting.
+              </p>
+            </div>
+            <div class="panel-actions">
+              <button class="btn btn-primary" id="history-new-chat-btn" type="button">
+                <span>＋</span> Start New Session
+              </button>
+            </div>
+          </div>
+
+          <div class="history-list-container" id="history-full-list">
+            <!-- Full session list rendered here -->
+          </div>
+        </div>
+      </section>
+
+      <!-- MODAL: Human-In-The-Loop (HITL) Security Approval -->
       <div class="hitl-overlay" id="hitl-modal" style="display: none;">
         <div class="hitl-modal">
-          <div class="hitl-modal-icon">⚠️</div>
-          <h3>Action Requires Your Approval</h3>
-          <p id="hitl-modal-desc">
-            The agent wants to perform a security-sensitive action.
-            Please review and confirm before proceeding.
+          <div class="hitl-modal-header">
+            <div class="hitl-modal-icon">⚠️</div>
+            <div>
+              <h3>Security Approval Required</h3>
+              <span class="hitl-badge">HITL Gate</span>
+            </div>
+          </div>
+          <p class="hitl-modal-desc" id="hitl-modal-desc">
+            The agent is requesting permission to execute an action requiring user approval.
           </p>
           <div class="hitl-actions">
             <button class="hitl-btn hitl-btn-decline" id="hitl-decline-btn" type="button">
               Decline & Escalate
             </button>
             <button class="hitl-btn hitl-btn-approve" id="hitl-approve-btn" type="button">
-              ✓ Approve Action
+              ✓ Approve & Proceed
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- MODAL: Upload Knowledge Document -->
+      <div class="modal-overlay" id="upload-doc-modal" style="display: none;">
+        <div class="modal-card">
+          <div class="modal-header">
+            <div class="modal-header-title">
+              <span style="font-size: 20px;">📄</span>
+              <h3>Upload Knowledge Base Document</h3>
+            </div>
+            <button class="modal-close-btn" id="close-upload-modal-btn">✕</button>
+          </div>
+
+          <form id="upload-doc-form">
+            <div class="form-group">
+              <label for="doc-title-input">Document Title</label>
+              <input
+                type="text"
+                id="doc-title-input"
+                class="form-control"
+                placeholder="e.g. Docker Desktop Troubleshooting Guide"
+                required
+              />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="doc-category-select">Category</label>
+                <select id="doc-category-select" class="form-control">
+                  <option value="Network">Network</option>
+                  <option value="Software">Software</option>
+                  <option value="Identity & Access">Identity & Access</option>
+                  <option value="Hardware">Hardware</option>
+                  <option value="Email">Email</option>
+                  <option value="General" selected>General</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="doc-platform-input">Platform(s)</label>
+                <input
+                  type="text"
+                  id="doc-platform-input"
+                  class="form-control"
+                  placeholder="Windows, macOS, Linux"
+                  value="Windows, macOS"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="doc-content-input">SOP Content / Resolution Instructions</label>
+              <textarea
+                id="doc-content-input"
+                class="form-control"
+                rows="5"
+                placeholder="Detail the technical troubleshooting instructions or runbook steps..."
+                required
+              ></textarea>
+            </div>
+
+            <div class="modal-status" id="upload-status-indicator" style="display: none;">
+              <span class="spinner-small"></span>
+              <span id="upload-status-text">Uploading and indexing document...</span>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" id="cancel-upload-btn">Cancel</button>
+              <button type="submit" class="btn btn-primary" id="submit-upload-btn">
+                <span>✓</span> Upload & Index
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </main>
   </div>
 
+  <!-- Centralized API Service Script -->
+  <script src="/static/api.js"></script>
+  <!-- Application Main Controller -->
   <script src="/static/app.js"></script>
 </body>
 </html>

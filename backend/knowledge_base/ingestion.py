@@ -213,6 +213,11 @@ def build_index(
     logger.info(
         f"Successfully indexed {collection.count()} chunks into ChromaDB."
     )
+    try:
+        from backend.knowledge_base.retriever import reset_retriever
+        reset_retriever()
+    except Exception:
+        pass
     return collection
 
 

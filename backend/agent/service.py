@@ -77,6 +77,15 @@ def get_session(session_id: str) -> dict[str, Any] | None:
     return _sessions.get(session_id)
 
 
+def delete_session(session_id: str) -> bool:
+    """Delete a session from memory."""
+    if session_id in _sessions:
+        del _sessions[session_id]
+        logger.info(f"Session deleted: {session_id}")
+        return True
+    return False
+
+
 def get_all_sessions() -> list[dict[str, Any]]:
     """Get summary info of all sessions."""
     return [
@@ -174,6 +183,22 @@ async def run_agent(session_id: str, user_message: str) -> dict[str, Any]:
         ai_messages = [m for m in messages if hasattr(m, "type") and m.type == "ai"]
         latest_response = ai_messages[-1].content if ai_messages else "I'm processing your request..."
 
+        # Build sources from retrieved chunks
+        retrieved_chunks = state.get("retrieved_chunks", [])
+        sources = []
+        for c in retrieved_chunks:
+            meta = c.get("metadata", {})
+            title = meta.get("title") or meta.get("sop_title") or meta.get("sop_id") or "SOP Document"
+            sources.append({
+                "title": title,
+                "sop_id": meta.get("sop_id", ""),
+                "category": meta.get("category", "General"),
+                "platforms": meta.get("platforms", ""),
+                "chunk_type": meta.get("chunk_type", "section"),
+                "score": round(float(c.get("score", 0.0)), 3) if c.get("score") is not None else 0.0,
+                "snippet": (c.get("text", "")[:280] + "...") if len(c.get("text", "")) > 280 else c.get("text", ""),
+            })
+
         # Build response metadata
         response = {
             "response": latest_response,
@@ -190,6 +215,7 @@ async def run_agent(session_id: str, user_message: str) -> dict[str, Any]:
                 "has_active_outage": state.get("active_outage") is not None,
                 "ticket_info": state.get("ticket_info"),
                 "diagnostic_results": state.get("diagnostic_results", []),
+                "sources": sources,
             },
         }
 
