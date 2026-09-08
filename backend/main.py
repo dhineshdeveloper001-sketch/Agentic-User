@@ -76,6 +76,11 @@ app.add_middleware(
 
 # ── Static Files & Single-Page UI ────────────────────────────────────────────
 _static_dir = Path(__file__).parent / "static"
+if not _static_dir.exists():
+    _cwd_static = Path.cwd() / "backend" / "static"
+    if _cwd_static.exists():
+        _static_dir = _cwd_static
+
 if _static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 

@@ -142,11 +142,11 @@ class HybridRetriever:
         try:
             coll = self.collection
             if coll.count() == 0:
-                logger.warning("Collection is empty — no results.")
-                return RetrievalResponse(query=query)
+                logger.warning("Collection is empty — falling back to keyword retrieval.")
+                return self._fallback_keyword_retrieve(query, platform, category)
         except Exception as e:
-            logger.error(f"Failed to access collection for query: {e}")
-            return RetrievalResponse(query=query)
+            logger.error(f"Failed to access collection for query: {e}. Falling back to keyword retrieval.")
+            return self._fallback_keyword_retrieve(query, platform, category)
 
         # ── Step 1: Dense semantic search ────────────────────────────────
         where_filter = None
@@ -182,7 +182,7 @@ class HybridRetriever:
             )
 
         if not results["ids"] or not results["ids"][0]:
-            return RetrievalResponse(query=query)
+            return self._fallback_keyword_retrieve(query, platform, category)
 
         # Build initial candidate list
         candidates: list[RetrievalResult] = []
@@ -280,6 +280,62 @@ class HybridRetriever:
             results=top_results,
             has_verified_runbook=has_verified,
             confidence=confidence,
+            query=query,
+        )
+
+    def _fallback_keyword_retrieve(
+        self,
+        query: str,
+        platform: str | None = None,
+        category: str | None = None,
+    ) -> RetrievalResponse:
+        """Resilient in-memory keyword matching if vector store is unavailable or cold-starting."""
+        from backend.knowledge_base.ingestion import get_raw_sops, chunk_sop
+        sops = get_raw_sops()
+        if not sops:
+            return RetrievalResponse(query=query)
+
+        query_lower = query.lower()
+        query_words = set(query_lower.split())
+        candidates: list[RetrievalResult] = []
+
+        for sop in sops:
+            sop_platforms = [p.lower() for p in sop.get("platforms", [])]
+            if platform and platform.lower() not in sop_platforms:
+                continue
+            if category and category.lower() != sop.get("category", "").lower():
+                continue
+
+            text_corpus = (
+                f"{sop.get('title', '')} "
+                f"{' '.join(sop.get('symptoms', []))} "
+                f"{' '.join(sop.get('tags', []))} "
+                f"{' '.join(sop.get('error_codes', []))} "
+                f"{sop.get('category', '')}"
+            ).lower()
+
+            overlap = sum(1 for w in query_words if len(w) > 2 and w in text_corpus)
+            if overlap > 0:
+                base_score = min(0.92, 0.45 + (overlap * 0.12))
+                for chunk in chunk_sop(sop):
+                    candidates.append(
+                        RetrievalResult(
+                            chunk_id=chunk["id"],
+                            text=chunk["text"],
+                            metadata=chunk["metadata"],
+                            semantic_score=base_score,
+                        )
+                    )
+
+        candidates.sort(key=lambda c: c.semantic_score, reverse=True)
+        top_candidates = candidates[: self.reranker_top_n]
+        best_score = top_candidates[0].semantic_score if top_candidates else 0.0
+        has_verified = best_score >= self.confidence_threshold
+
+        return RetrievalResponse(
+            results=top_candidates,
+            has_verified_runbook=has_verified,
+            confidence=round(best_score, 3),
             query=query,
         )
 

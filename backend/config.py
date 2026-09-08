@@ -7,9 +7,10 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load .env file from the backend directory
+# Load .env file from backend or root project directory
 _backend_dir = Path(__file__).parent
 load_dotenv(_backend_dir / ".env")
+load_dotenv(_backend_dir.parent / ".env")
 
 
 # ── OpenAI / LLM Configuration ───────────────────────────────────────────────
@@ -77,4 +78,10 @@ HITL_REQUIRED_ACTIONS: list[str] = [
 ]
 
 # ── SOP Data Directory ───────────────────────────────────────────────────────
-SOP_DIR: str = str(_backend_dir / "knowledge_base" / "sample_sops")
+_default_sop_dir = _backend_dir / "knowledge_base" / "sample_sops"
+if not _default_sop_dir.exists():
+    _cwd_sop_dir = Path.cwd() / "backend" / "knowledge_base" / "sample_sops"
+    if _cwd_sop_dir.exists():
+        _default_sop_dir = _cwd_sop_dir
+
+SOP_DIR: str = os.getenv("SOP_DIR", str(_default_sop_dir))

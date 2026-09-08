@@ -1,5 +1,4 @@
-# Production requirements optimized for serverless platforms (Vercel < 250MB limit)
-# Note: Heavy PyTorch sentence-transformers is excluded; hybrid RAG uses ChromaDB dense vectors + BM25 keyword boosting.
+# Full requirements including PyTorch and CrossEncoder rerankers (for local GPU/CPU or container hosting)
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 langchain>=0.3.0
@@ -7,6 +6,7 @@ langchain-openai>=0.2.0
 langchain-community>=0.3.0
 langgraph>=0.2.0
 chromadb>=0.5.0
+sentence-transformers>=3.0.0
 openai>=1.40.0
 pydantic>=2.0.0
 python-dotenv>=1.0.0

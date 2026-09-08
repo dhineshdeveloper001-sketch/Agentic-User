@@ -1,0 +1,31 @@
+# Ignore frontend Next.js directory (Vercel builds single-service backend + static UI)
+frontend/
+
+# Git & CI
+.git/
+.github/
+.gitignore
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Local databases & ChromaDB persistent caches
+data/chromadb/
+backend/data/chromadb/
+*.sqlite3
+*.db
+
+# Docker
+Dockerfile
+.dockerignore
+render.yaml
+
+# Documentation & Scratch
+HOSTING_GUIDE.md
+requirements-full.txt
+tests/
