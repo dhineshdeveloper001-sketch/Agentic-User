@@ -7,10 +7,10 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load .env file from backend or root project directory
+# Load .env file from backend or root project directory (root takes precedence)
 _backend_dir = Path(__file__).parent
 load_dotenv(_backend_dir / ".env")
-load_dotenv(_backend_dir.parent / ".env")
+load_dotenv(_backend_dir.parent / ".env", override=True)
 
 
 # ── OpenAI / LLM Configuration ───────────────────────────────────────────────
@@ -18,6 +18,12 @@ OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 OPENAI_BASE_URL: str = os.getenv("OPENAI_BASE_URL", "")
 OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 OPENAI_TEMPERATURE: float = float(os.getenv("OPENAI_TEMPERATURE", "0.2"))
+
+# Auto-configure Zhipu AI / GLM endpoint if Zhipu key format is detected and no base_url specified
+if OPENAI_API_KEY and "." in OPENAI_API_KEY and len(OPENAI_API_KEY.split(".")[0]) >= 16 and not OPENAI_BASE_URL:
+    OPENAI_BASE_URL = "https://open.bigmodel.cn/api/paas/v4/"
+    if OPENAI_MODEL == "gpt-4o-mini":
+        OPENAI_MODEL = "glm-4-flash"
 
 # ── RAG Pipeline ─────────────────────────────────────────────────────────────
 CONFIDENCE_THRESHOLD: float = float(os.getenv("CONFIDENCE_THRESHOLD", "0.3"))
@@ -27,13 +33,18 @@ EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
 RERANKER_MODEL: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 # ── ChromaDB ─────────────────────────────────────────────────────────────────
-# On Vercel serverless, only /tmp is writable
-_default_chroma_dir = (
-    "/tmp/chromadb"
-    if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME")
-    else str(_backend_dir / "data" / "chromadb")
-)
-CHROMA_PERSIST_DIR: str = os.getenv("CHROMA_PERSIST_DIR", _default_chroma_dir)
+# On Vercel serverless or AWS Lambda, only /tmp is writable
+_is_serverless = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME") or os.getenv("LAMBDA_TASK_ROOT"))
+if _is_serverless:
+    _default_chroma_dir = "/tmp/chromadb"
+else:
+    _default_chroma_dir = str(_backend_dir / "data" / "chromadb")
+
+_env_chroma_dir = os.getenv("CHROMA_PERSIST_DIR", "")
+if _is_serverless or not _env_chroma_dir:
+    CHROMA_PERSIST_DIR = "/tmp/chromadb" if _is_serverless else _default_chroma_dir
+else:
+    CHROMA_PERSIST_DIR = _env_chroma_dir
 
 # ── Server ───────────────────────────────────────────────────────────────────
 BACKEND_HOST: str = os.getenv("BACKEND_HOST", "0.0.0.0")
@@ -85,3 +96,4 @@ if not _default_sop_dir.exists():
         _default_sop_dir = _cwd_sop_dir
 
 SOP_DIR: str = os.getenv("SOP_DIR", str(_default_sop_dir))
+

@@ -5,6 +5,7 @@
       "src": "api/index.py",
       "use": "@vercel/python",
       "config": {
+        "maxLambdaSize": "250mb",
         "includeFiles": [
           "backend/static/**",
           "backend/knowledge_base/sample_sops/**"
@@ -14,8 +15,16 @@
   ],
   "routes": [
     {
+      "src": "/static/(.*)",
+      "headers": {
+        "cache-control": "public, max-age=86400, stale-while-revalidate=604800"
+      },
+      "dest": "api/index.py"
+    },
+    {
       "src": "/(.*)",
       "dest": "api/index.py"
     }
   ]
 }
+

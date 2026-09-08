@@ -38,11 +38,11 @@ def get_graph():
     return _compiled_graph
 
 
-def create_session(user_id: str = "default") -> str:
+def create_session(user_id: str = "default", session_id: str | None = None) -> str:
     """Create a new support session and return its ID."""
-    session_id = str(uuid.uuid4())
-    _sessions[session_id] = {
-        "session_id": session_id,
+    sid = session_id or str(uuid.uuid4())
+    _sessions[sid] = {
+        "session_id": sid,
         "user_id": user_id,
         "state": {
             "messages": [],
@@ -68,13 +68,22 @@ def create_session(user_id: str = "default") -> str:
         },
         "is_continuing": False,
     }
-    logger.info(f"Session created: {session_id}")
-    return session_id
+    logger.info(f"Session created: {sid}")
+    return sid
 
 
 def get_session(session_id: str) -> dict[str, Any] | None:
     """Retrieve a session by ID."""
     return _sessions.get(session_id)
+
+
+def get_or_create_session(session_id: str, user_id: str = "default") -> dict[str, Any]:
+    """Retrieve an existing session or auto-initialize one for serverless resiliency."""
+    session = _sessions.get(session_id)
+    if not session:
+        create_session(user_id=user_id, session_id=session_id)
+        session = _sessions[session_id]
+    return session
 
 
 def delete_session(session_id: str) -> bool:
@@ -113,10 +122,7 @@ async def run_agent(session_id: str, user_message: str) -> dict[str, Any]:
     Returns:
         Dict with the agent's response and metadata.
     """
-    session = _sessions.get(session_id)
-    if not session:
-        raise ValueError(f"Session not found: {session_id}")
-
+    session = get_or_create_session(session_id)
     state = session["state"]
     is_continuing = session["is_continuing"]
 

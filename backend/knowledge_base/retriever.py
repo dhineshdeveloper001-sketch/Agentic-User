@@ -73,7 +73,7 @@ class HybridRetriever:
         self._reranker = None
 
     @property
-    def collection(self) -> chromadb.Collection:
+    def collection(self) -> Any:
         """Get the active collection handle, safely re-connecting if invalidated."""
         if self._explicit_collection is not None:
             return self._explicit_collection
@@ -87,22 +87,19 @@ class HybridRetriever:
             self._collection = None
 
         try:
-            client = chromadb.PersistentClient(path=str(CHROMA_PERSIST_DIR))
-            coll = client.get_or_create_collection(
-                name="it_support_sops",
-                metadata={"hnsw:space": "cosine"},
-            )
-            if coll.count() == 0:
-                coll = build_index(force_rebuild=False)
+            coll = build_index(force_rebuild=False)
             self._collection = coll
             return self._collection
         except Exception as e:
-            logger.error(f"Error accessing ChromaDB collection: {e}. Rebuilding index...")
-            self._collection = build_index(force_rebuild=False)
-            return self._collection
+            logger.error(f"Error accessing ChromaDB collection: {e}.")
+            return None
 
     def _get_reranker(self):
         """Lazy-load the cross-encoder reranker."""
+        import os
+        if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME") or os.getenv("DISABLE_RERANKER"):
+            return None
+
         if self._reranker is None:
             try:
                 from sentence_transformers import CrossEncoder
@@ -111,10 +108,9 @@ class HybridRetriever:
                     "cross-encoder/ms-marco-MiniLM-L-6-v2"
                 )
                 logger.info("Cross-encoder reranker loaded.")
-            except ImportError:
+            except Exception as e:
                 logger.warning(
-                    "sentence-transformers not available — "
-                    "skipping reranking step."
+                    f"Cross-encoder reranker unavailable ({e}) — skipping reranking step."
                 )
         return self._reranker
 

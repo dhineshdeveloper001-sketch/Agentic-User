@@ -1,0 +1,74 @@
+{
+  "id": "SOP-PERF-001",
+  "title": "Computer Running Slow — High CPU & Memory Usage",
+  "category": "System",
+  "symptoms": [
+    "My computer is very slow",
+    "Computer is running slow",
+    "PC lagging and unresponsive",
+    "High CPU usage",
+    "High RAM or memory usage",
+    "Applications freezing",
+    "System slowness",
+    "Fan running loud and computer slow"
+  ],
+  "error_codes": [
+    "Error: Low system memory",
+    "Warning: High disk usage 100%",
+    "System unresponsiveness"
+  ],
+  "platforms": ["Windows", "macOS"],
+  "prerequisites": [
+    "Access to Task Manager or Activity Monitor",
+    "Administrator rights to restart processes"
+  ],
+  "diagnostic_questions": [
+    "Did this slowness start after opening a specific application?",
+    "How long has the computer been powered on without a reboot?",
+    "Is your hard drive almost full?",
+    "Do you hear the fan spinning at maximum speed constantly?"
+  ],
+  "diagnostic_tools": [
+    {
+      "tool": "check_service_status",
+      "args": { "service_name": "ad-controller" },
+      "purpose": "Verify enterprise directory controller health"
+    }
+  ],
+  "resolution_steps": [
+    {
+      "step": 1,
+      "action": "Let's check what's consuming your system resources. Press Ctrl + Shift + Esc to open Task Manager. Look at the 'Processes' tab and sort by CPU and Memory. Find any hung apps or browsers with excessive memory usage and click 'End Task'.",
+      "checkpoint": "Did ending high-resource applications improve your computer's speed?",
+      "branch_on_fail": null,
+      "auto_tool": null
+    },
+    {
+      "step": 2,
+      "action": "A full system reboot clears accumulated cached memory, memory leaks, and hung background services. Please save your open documents and restart your computer now.",
+      "checkpoint": "Did restarting your computer resolve the slowness?",
+      "branch_on_fail": null,
+      "auto_tool": null
+    },
+    {
+      "step": 3,
+      "action": "Let's clear temporary system files. Press Win + R, type 'cleanmgr' and press Enter. Select drive C:, check 'Temporary files' and 'Recycle Bin', then click OK to delete junk files.",
+      "checkpoint": "Did disk cleanup free up space and help your PC?",
+      "branch_on_fail": null,
+      "auto_tool": {
+        "tool": "trigger_remote_action",
+        "args": { "action_type": "clear_browser_cache" }
+      }
+    },
+    {
+      "step": 4,
+      "action": "Check for pending Windows Updates. Go to Start → Settings → Windows Update and install any pending quality or driver updates, then restart.",
+      "checkpoint": "Are updates installed and is the computer running normally now?",
+      "branch_on_fail": "escalation"
+    }
+  ],
+  "escalation_criteria": "If high CPU/memory usage persists across reboots with no user apps running (suspected hardware degradation or system corruption)",
+  "escalation_priority": "P3",
+  "escalation_team": "Desktop Support Engineering",
+  "tags": ["performance", "slow", "lag", "cpu", "memory", "ram", "system", "hang", "freeze", "computer"]
+}

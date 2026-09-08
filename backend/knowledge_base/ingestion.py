@@ -21,23 +21,26 @@ logger = logging.getLogger(__name__)
 
 
 def load_sops(sop_dir: str | None = None) -> list[dict[str, Any]]:
-    """Load all SOP JSON files from the data directory."""
-    sop_dir = sop_dir or SOP_DIR
-    sops = []
-    sop_path = Path(sop_dir)
-    if not sop_path.exists():
-        logger.warning(f"SOP directory not found: {sop_dir}")
-        return sops
+    """Load all SOP JSON files from the data directory and any dynamic uploads."""
+    sop_dirs = [Path(sop_dir or SOP_DIR)]
+    tmp_dir = Path("/tmp/sample_sops")
+    if tmp_dir.exists() and tmp_dir not in sop_dirs:
+        sop_dirs.append(tmp_dir)
 
-    for fpath in sorted(sop_path.glob("*.json")):
-        try:
-            with open(fpath, "r", encoding="utf-8") as f:
-                sop = json.load(f)
-                sops.append(sop)
-                logger.info(f"Loaded SOP: {sop.get('id', fpath.name)}")
-        except (json.JSONDecodeError, IOError) as e:
-            logger.error(f"Failed to load {fpath}: {e}")
-    return sops
+    sops_map = {}
+    for s_dir in sop_dirs:
+        if not s_dir.exists():
+            continue
+        for fpath in sorted(s_dir.glob("*.json")):
+            try:
+                with open(fpath, "r", encoding="utf-8") as f:
+                    sop = json.load(f)
+                    sid = sop.get("id", fpath.stem)
+                    sops_map[sid] = sop
+                    logger.info(f"Loaded SOP: {sid}")
+            except (json.JSONDecodeError, IOError) as e:
+                logger.error(f"Failed to load {fpath}: {e}")
+    return list(sops_map.values())
 
 
 def chunk_sop(sop: dict[str, Any]) -> list[dict[str, Any]]:
@@ -146,7 +149,7 @@ def chunk_sop(sop: dict[str, Any]) -> list[dict[str, Any]]:
 
 def build_index(
     force_rebuild: bool = False,
-) -> chromadb.Collection:
+) -> Any:
     """
     Load all SOPs, chunk them, and index into ChromaDB.
     Returns the ChromaDB collection ready for queries.
@@ -154,28 +157,50 @@ def build_index(
     If the collection already exists and force_rebuild is False,
     returns the existing collection.
     """
-    persist_dir = Path(CHROMA_PERSIST_DIR)
-    persist_dir.mkdir(parents=True, exist_ok=True)
-
-    client = chromadb.PersistentClient(path=str(persist_dir))
-
+    client = None
     collection_name = "it_support_sops"
 
-    # Check if collection already exists
-    existing = [c.name for c in client.list_collections()]
-    if collection_name in existing and not force_rebuild:
-        logger.info("Using existing ChromaDB collection.")
-        return client.get_collection(name=collection_name)
+    # Attempt PersistentClient first with fallback paths
+    for path_candidate in [CHROMA_PERSIST_DIR, "/tmp/chromadb"]:
+        try:
+            persist_dir = Path(path_candidate)
+            persist_dir.mkdir(parents=True, exist_ok=True)
+            client = chromadb.PersistentClient(path=str(persist_dir))
+            break
+        except Exception as e:
+            logger.warning(f"Could not initialize PersistentClient at {path_candidate}: {e}")
 
-    # Delete and rebuild
-    if collection_name in existing:
-        client.delete_collection(name=collection_name)
-        logger.info("Deleted existing collection for rebuild.")
+    # Fallback to EphemeralClient (in-memory) if disk persistence is blocked
+    if client is None:
+        try:
+            client = chromadb.EphemeralClient()
+            logger.info("Using ChromaDB EphemeralClient (in-memory) for serverless execution.")
+        except Exception as e:
+            logger.error(f"ChromaDB EphemeralClient failed: {e}")
+            return None
 
-    collection = client.create_collection(
-        name=collection_name,
-        metadata={"hnsw:space": "cosine"},
-    )
+    try:
+        # Check if collection already exists
+        existing = [c.name for c in client.list_collections()]
+        if collection_name in existing and not force_rebuild:
+            logger.info("Using existing ChromaDB collection.")
+            return client.get_collection(name=collection_name)
+
+        # Delete and rebuild
+        if collection_name in existing:
+            client.delete_collection(name=collection_name)
+            logger.info("Deleted existing collection for rebuild.")
+
+        collection = client.create_collection(
+            name=collection_name,
+            metadata={"hnsw:space": "cosine"},
+        )
+    except Exception as e:
+        logger.error(f"Error creating/retrieving ChromaDB collection: {e}")
+        try:
+            collection = client.get_or_create_collection(name=collection_name)
+        except Exception:
+            return None
 
     # Load and chunk all SOPs
     sops = load_sops()
@@ -204,15 +229,18 @@ def build_index(
                 meta[k] = str(v)
         metadatas.append(meta)
 
-    collection.add(
-        ids=ids,
-        documents=documents,
-        metadatas=metadatas,
-    )
+    try:
+        collection.add(
+            ids=ids,
+            documents=documents,
+            metadatas=metadatas,
+        )
+        logger.info(
+            f"Successfully indexed {collection.count()} chunks into ChromaDB."
+        )
+    except Exception as e:
+        logger.error(f"Failed to add chunks to ChromaDB collection: {e}")
 
-    logger.info(
-        f"Successfully indexed {collection.count()} chunks into ChromaDB."
-    )
     try:
         from backend.knowledge_base.retriever import reset_retriever
         reset_retriever()

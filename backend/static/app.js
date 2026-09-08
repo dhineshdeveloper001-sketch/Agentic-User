@@ -102,6 +102,10 @@
 
   // ── Initialization ──────────────────────────────────────────────────────────
   async function init() {
+    // Restore saved theme
+    const savedTheme = localStorage.getItem("it_support_ui_theme") || "default";
+    applyTheme(savedTheme);
+
     setupEventListeners();
     await checkHealth();
     setInterval(checkHealth, 15000);
@@ -292,6 +296,26 @@
     refreshToolsBtn?.addEventListener("click", loadDiagnosticsTools);
     diagOutputClearBtn?.addEventListener("click", () => {
       diagOutputContainer.style.display = "none";
+    });
+
+    // Theme Picker Event Listeners
+    document.querySelectorAll(".theme-dot").forEach((dot) => {
+      dot.addEventListener("click", () => {
+        const theme = dot.getAttribute("data-theme") || "default";
+        applyTheme(theme);
+      });
+    });
+  }
+
+  function applyTheme(themeName) {
+    if (themeName === "default") {
+      document.documentElement.removeAttribute("data-theme");
+    } else {
+      document.documentElement.setAttribute("data-theme", themeName);
+    }
+    localStorage.setItem("it_support_ui_theme", themeName);
+    document.querySelectorAll(".theme-dot").forEach((d) => {
+      d.classList.toggle("active", (d.getAttribute("data-theme") || "default") === themeName);
     });
   }
 
