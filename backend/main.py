@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -129,29 +129,30 @@ class KnowledgeUploadRequest(BaseModel):
     platforms: list[str] = ["Windows", "macOS"]
 
 
-# ── Endpoints ────────────────────────────────────────────────────────────────
+# ── API Router ───────────────────────────────────────────────────────────────
+api_router = APIRouter()
 
-@app.get("/api/health")
+@api_router.get("/health")
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "service": "IT Support Agent"}
 
 
-@app.post("/api/sessions", response_model=SessionResponse)
+@api_router.post("/sessions", response_model=SessionResponse)
 async def create_new_session():
     """Create a new support session."""
     session_id = create_session()
     return SessionResponse(session_id=session_id)
 
 
-@app.get("/api/sessions", response_model=list[SessionResponse])
+@api_router.get("/sessions", response_model=list[SessionResponse])
 async def list_sessions():
     """List all active sessions."""
     sessions = get_all_sessions()
     return [SessionResponse(**s) for s in sessions]
 
 
-@app.get("/api/sessions/{session_id}")
+@api_router.get("/sessions/{session_id}")
 async def get_session_details(session_id: str):
     """Get session details and message history."""
     session = get_session(session_id)
@@ -184,14 +185,14 @@ async def get_session_details(session_id: str):
     }
 
 
-@app.delete("/api/sessions/{session_id}")
+@api_router.delete("/sessions/{session_id}")
 async def delete_session_endpoint(session_id: str):
     """Delete a session by ID."""
     success = delete_session(session_id)
     return {"status": "success", "session_id": session_id}
 
 
-@app.post("/api/chat", response_model=ChatResponse)
+@api_router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     """
     Send a message to the IT Support Agent.
@@ -211,7 +212,7 @@ async def chat(request: ChatRequest):
     )
 
 
-@app.post("/api/hitl/{session_id}/approve")
+@api_router.post("/hitl/{session_id}/approve")
 async def hitl_approve(session_id: str, request: HITLRequest):
     """
     Human-in-the-loop approval endpoint.
@@ -238,7 +239,7 @@ async def hitl_approve(session_id: str, request: HITLRequest):
     )
 
 
-@app.post("/api/knowledge/rebuild")
+@api_router.post("/knowledge/rebuild")
 async def rebuild_knowledge_base():
     """Force rebuild the knowledge base index."""
     try:
@@ -248,7 +249,7 @@ async def rebuild_knowledge_base():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/knowledge/documents")
+@api_router.get("/knowledge/documents")
 async def list_knowledge_documents():
     """List all SOP documents loaded in the knowledge base."""
     sops = get_raw_sops()
@@ -270,7 +271,7 @@ async def list_knowledge_documents():
     return docs
 
 
-@app.post("/api/knowledge/upload")
+@api_router.post("/knowledge/upload")
 async def upload_knowledge_document(request: KnowledgeUploadRequest):
     """Add a new SOP document to the knowledge base and trigger indexing."""
     import json
@@ -330,7 +331,7 @@ async def upload_knowledge_document(request: KnowledgeUploadRequest):
     }
 
 
-@app.get("/api/diagnostics/tools")
+@api_router.get("/diagnostics/tools")
 async def list_diagnostic_tools():
     """List all available diagnostic & remediation tools with metadata."""
     return [
@@ -426,7 +427,7 @@ async def list_diagnostic_tools():
     ]
 
 
-@app.post("/api/diagnostics/run")
+@api_router.post("/diagnostics/run")
 async def run_diagnostic_tool_endpoint(request: DiagnosticRunRequest):
     """Execute a backend diagnostic or remediation tool directly."""
     from datetime import datetime, timezone
@@ -460,6 +461,11 @@ async def run_diagnostic_tool_endpoint(request: DiagnosticRunRequest):
             "result": {"error": str(e), "status": "failed"},
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
+
+
+# Mount Router for both `/api` prefix and root prefix (resilient to Vercel route rewrites)
+app.include_router(api_router, prefix="/api")
+app.include_router(api_router, prefix="")
 
 
 

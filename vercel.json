@@ -19,12 +19,17 @@
       "headers": {
         "cache-control": "public, max-age=86400, stale-while-revalidate=604800"
       },
-      "dest": "api/index.py"
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
     },
     {
       "src": "/(.*)",
-      "dest": "api/index.py"
+      "dest": "/api/index.py"
     }
   ]
 }
+
 
