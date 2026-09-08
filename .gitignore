@@ -10,10 +10,33 @@ ENV/
 env.bak/
 venv.bak/
 
-# Environment Variables & Secrets
+# Environment Variables & Credentials
 .env
+.env.*
 *.env
+*.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 !.env.example
+!*.env.example
+
+# Credentials, Keys, Tokens & Certificates
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+*.id_rsa
+*id_rsa*
+secrets.json
+credentials.json
+service_account*.json
+client_secret*.json
+*.token
+*.auth
 
 # ChromaDB & Local Data / Scratch
 data/chromadb/
